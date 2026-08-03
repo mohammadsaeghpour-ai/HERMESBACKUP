@@ -20,6 +20,9 @@ from agents.stage0_independent.dl_forecast_agent import DLForecastAgent
 from agents.stage1_meta.regime_agent import RegimeAgent
 from agents.stage1_meta.structure_agent import StructureAgent
 from agents.stage1_meta.whale_agent import WhaleAgent
+from agents.stage1_meta.mtf_agent import MTFConfirmAgent
+from agents.stage1_meta.funding_rate_agent import FundingRateAgent
+from agents.stage1_meta.open_interest_agent import OpenInterestAgent
 from agents.stage2_structure.rsi_divergence_agent import RSIDivergenceAgent
 from agents.stage2_structure.bb_squeeze_agent import BBSqueezeAgent
 from agents.stage2_structure.liquidity_agent import LiquidityAgent
@@ -51,6 +54,9 @@ class MasterOrchestrator:
         self.regime = RegimeAgent()
         self.structure = StructureAgent()
         self.whale = WhaleAgent()
+        self.mtf = MTFConfirmAgent()
+        self.funding = FundingRateAgent()
+        self.open_interest = OpenInterestAgent()
         
         # Stage 2
         self.rsi_div = RSIDivergenceAgent()
@@ -93,7 +99,7 @@ class MasterOrchestrator:
         # Stage 1: Meta agents
         print("\n  [STAGE 1] Meta Agents:")
         s1 = []
-        for agent in [self.regime, self.structure, self.whale]:
+        for agent in [self.regime, self.structure, self.whale, self.mtf, self.funding, self.open_interest]:
             r = agent.analyze(df, symbol, timeframe)
             s1.append(r)
             print("    %15s: %5s (conf=%3.0f%%)" % (r.name, r.direction[:5], r.confidence))
@@ -130,9 +136,9 @@ class MasterOrchestrator:
         buy_w = sum(r.weight for r in all_agents if r.direction == "BUY")
         sell_w = sum(r.weight for r in all_agents if r.direction == "SELL")
         total = buy_w + sell_w if buy_w + sell_w > 0 else 1
-        # BTC needs stricter threshold (77%), ETH can be looser (72%)
+        # More agents = higher threshold needed
         is_btc = "BTC" in symbol.upper()
-        vote_thresh = 0.77 if is_btc else 0.72
+        vote_thresh = 0.78 if is_btc else 0.75
         vote_ok = buy_w/total >= vote_thresh or sell_w/total >= vote_thresh
         
         h4_df = fetch_candles(symbol, "4H", 100)

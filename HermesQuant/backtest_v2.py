@@ -24,6 +24,9 @@ from agents.stage0_independent.dl_forecast_agent import DLForecastAgent
 from agents.stage1_meta.regime_agent import RegimeAgent
 from agents.stage1_meta.structure_agent import StructureAgent
 from agents.stage1_meta.whale_agent import WhaleAgent
+from agents.stage1_meta.mtf_agent import MTFConfirmAgent
+from agents.stage1_meta.funding_rate_agent import FundingRateAgent
+from agents.stage1_meta.open_interest_agent import OpenInterestAgent
 from agents.stage2_structure.rsi_divergence_agent import RSIDivergenceAgent
 from agents.stage2_structure.bb_squeeze_agent import BBSqueezeAgent
 from agents.stage2_structure.liquidity_agent import LiquidityAgent
@@ -63,8 +66,9 @@ def backtest_v2(instId="ETH-USDT-SWAP", bar="15m", vote_thresh=0.75):
     # Init agents
     agents = [
         TrendAgent(), MomentumAgent(), VolumeAgent(),
-        VolatilityAgent(), PatternAgent(), DLForecastAgent(),
+        VolatilityAgent(), DLForecastAgent(),
         RegimeAgent(), StructureAgent(), WhaleAgent(),
+        MTFConfirmAgent(), FundingRateAgent(), OpenInterestAgent(),
         RSIDivergenceAgent(), BBSqueezeAgent(), LiquidityAgent(), WyckoffAgent(), MathBrainAgent(),
         GameTheoryAgent(), SmartActionAgent(), MLAgent(),
     ]
@@ -269,9 +273,9 @@ if __name__ == "__main__":
     print("#  BACKTEST v2: Full 7-Gate Filter")
     print("#"*70)
     
-    r_eth = backtest_v2("ETH-USDT-SWAP", "15m", vote_thresh=0.72)
+    r_eth = backtest_v2("ETH-USDT-SWAP", "15m", vote_thresh=0.75)
     print("\n")
-    r_btc = backtest_v2("BTC-USDT-SWAP", "15m", vote_thresh=0.77)
+    r_btc = backtest_v2("BTC-USDT-SWAP", "15m", vote_thresh=0.78)
     
     print("\n" + "#"*70)
     print("#  COMPARISON")
