@@ -6,18 +6,35 @@ class MLAgent:
     name = "ML"
     weight = 1.2
     
+    # Accuracy-based weights from backtest
+    ACCURACY_WEIGHTS = {
+        "SMC": 2.0, "Liquidity": 1.8, "GameTheory": 1.5,
+        "Pattern": 1.3, "Momentum": 1.0, "MathBrain": 1.0,
+        "MarketStructure": 0.8, "Trend": 0.5,
+        "DLForecast": 0.4, "Volume": 0.8, "Wyckoff": 0.7,
+        "Regime": 0.6, "Whale": 0.6,
+    }
+    
     def analyze(self, df, symbol="", timeframe="", agent_results=None):
         if not agent_results:
             return AgentOutput(name=self.name, direction="NEUTRAL", confidence=0)
         
-        buy_w = sum(r.weight for r in agent_results if r.direction == "BUY")
-        sell_w = sum(r.weight for r in agent_results if r.direction == "SELL")
+        buy_w = 0
+        sell_w = 0
+        for r in agent_results:
+            aw = self.ACCURACY_WEIGHTS.get(r.name, 1.0)
+            eff_w = r.weight * aw * (r.confidence / 100.0)
+            if r.direction == "BUY":
+                buy_w += eff_w
+            elif r.direction == "SELL":
+                sell_w += eff_w
+        
         total = buy_w + sell_w if buy_w + sell_w > 0 else 1
         
-        if buy_w > sell_w * 1.3:
+        if buy_w > sell_w * 2.0:
             d = "BUY"
             score = (buy_w - sell_w) / total
-        elif sell_w > buy_w * 1.3:
+        elif sell_w > buy_w * 2.0:
             d = "SELL"
             score = -(sell_w - buy_w) / total
         else:
@@ -25,6 +42,6 @@ class MLAgent:
             score = 0
         
         return AgentOutput(name=self.name, direction=d,
-                          confidence=abs(score)*100, score=score,
+                          confidence=min(abs(score)*150, 90), score=score,
                           weight=self.weight,
                           evidence=["Ensemble: BUY_w=%.1f SELL_w=%.1f" % (buy_w, sell_w)])

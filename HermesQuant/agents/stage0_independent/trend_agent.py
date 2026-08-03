@@ -19,17 +19,22 @@ class TrendAgent:
         st_dir, _ = ind.supertrend(df)
         direction = st_dir.iloc[-1]
         
-        if direction == 1 and e8 > e20 > e50:
+        # Strict: ADX>30 AND EMA alignment AND supertrend agrees
+        strong_trend = adx_val > 30
+        ema_aligned_up = e8 > e20 > e50
+        ema_aligned_down = e8 < e20 < e50
+        
+        if direction == 1 and ema_aligned_up and strong_trend:
             d = "BUY"
-            score = min(adx_val / 50, 1.0)
-        elif direction == -1 and e8 < e20 < e50:
+            score = min(adx_val / 50, 1.0) * 0.7
+        elif direction == -1 and ema_aligned_down and strong_trend:
             d = "SELL"
-            score = -min(adx_val / 50, 1.0)
+            score = -min(adx_val / 50, 1.0) * 0.7
         else:
             d = "NEUTRAL"
             score = 0
         
-        conf = min(adx_val * 2, 100) if adx_val > 10 else 0
+        conf = min(adx_val * 1.2, 70) if adx_val > 30 else 0
         ev = ["Supertrend=%s" % ("UP" if direction==1 else "DOWN"),
               "ADX=%.1f" % adx_val, "EMA: 8=%.1f 20=%.1f 50=%.1f" % (e8,e20,e50)]
         return AgentOutput(name=self.name, direction=d, confidence=conf,

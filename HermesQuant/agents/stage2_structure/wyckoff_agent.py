@@ -20,21 +20,22 @@ class WyckoffAgent:
         price = df.iloc[-1]["close"]
         prev_close = df.iloc[-2]["close"]
         
-        # Spring: price dipped below support then closed above
-        recent_low = df.iloc[-3:]["low"].min()
-        if recent_low < support and price > support:
-            score = 0.4
+        # Spring: needs volume confirmation + recent support test
+        recent_low = df.iloc[-5:]["low"].min()
+        recent_vol = ind.volume_ratio(df).iloc[-1]
+        
+        if recent_low < support * 1.002 and price > support and recent_vol > 1.3:
+            score = 0.3
             d = "BUY"
-            ev = ["Wyckoff SPRING detected (low=%.1f < support=%.1f)" % (recent_low, support)]
-        # Upthrust: price spiked above resistance then closed below
-        elif df.iloc[-3:]["high"].max() > resistance and price < resistance:
-            score = -0.4
+            ev = ["Wyckoff SPRING (vol=%.1fx)" % recent_vol]
+        elif df.iloc[-5:]["high"].max() > resistance * 0.998 and price < resistance and recent_vol > 1.3:
+            score = -0.3
             d = "SELL"
-            ev = ["Wyckoff UPTHRUST detected"]
+            ev = ["Wyckoff UPTHRUST (vol=%.1fx)" % recent_vol]
         else:
             score = 0
             d = "NEUTRAL"
-            ev = ["No Wyckoff pattern"]
+            ev = ["No Wyckoff"]
         
         return AgentOutput(name=self.name, direction=d, confidence=abs(score)*150,
                           score=score, weight=self.weight, evidence=ev)

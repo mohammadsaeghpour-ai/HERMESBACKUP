@@ -128,18 +128,24 @@ class MasterOrchestrator:
         buy_w = sum(r.weight for r in all_agents if r.direction == "BUY")
         sell_w = sum(r.weight for r in all_agents if r.direction == "SELL")
         total = buy_w + sell_w if buy_w + sell_w > 0 else 1
-        vote_ok = buy_w/total >= 0.8 or sell_w/total >= 0.8
+        vote_ok = buy_w/total >= 0.70 or sell_w/total >= 0.70
         
         h4_df = fetch_candles(symbol, "4H", 100)
         _, h4_st = ind.supertrend(h4_df)
-        h4_dir = 1 if h4_df.iloc[-1]["close"] > h4_st.iloc[-1] else -1
-        h4_agrees = (h4_dir == 1 and signal.direction == "BUY") or (h4_dir == -1 and signal.direction == "SELL")
+        h4_price = h4_df.iloc[-1]["close"]
+        h4_st_val = h4_st.iloc[-1]
+        h4_ratio = abs(h4_price - h4_st_val) / h4_price
+        if h4_ratio < 0.002:
+            h4_agrees = True  # 4H neutral — don't block
+        else:
+            h4_dir = 1 if h4_price > h4_st_val else -1
+            h4_agrees = (h4_dir == 1 and signal.direction == "BUY") or (h4_dir == -1 and signal.direction == "SELL")
         
         adx_v, _, _ = ind.adx(df)
-        adx_ok = adx_v.iloc[-1] > MIN_ADX
+        adx_ok = adx_v.iloc[-1] > 28
         
         vr = ind.volume_ratio(df).iloc[-1]
-        vol_ok = vr > MIN_VOLUME_RATIO
+        vol_ok = vr > 0.8
         
         hour = now.hour
         session_ok = (8 <= hour <= 14) or (14 <= hour <= 22)

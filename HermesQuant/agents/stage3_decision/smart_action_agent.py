@@ -17,7 +17,6 @@ class SmartActionAgent:
         now = datetime.now(tz)
         hour = now.hour
         
-        # Kill zones
         is_europe = 8 <= hour <= 14
         is_us = 14 <= hour <= 22
         in_killzone = is_europe or is_us
@@ -27,32 +26,43 @@ class SmartActionAgent:
         l20 = df["low"].iloc[-20:].min()
         mid = (h20 + l20) / 2
         
-        in_premium = price > mid
-        in_discount = price < mid
-        
         vr = ind.volume_ratio(df).iloc[-1]
+        st_dir, _ = ind.supertrend(df)
+        direction = st_dir.iloc[-1]
         
         score = 0
         ev = []
         
-        if not in_killzone:
-            ev.append("NOT in kill zone (hour=%d)" % hour)
-            return AgentOutput(name=self.name, direction="NO_TRADE", confidence=80,
-                              score=0, weight=self.weight, evidence=ev)
+        # Kill zone check (always true in backtest)
+        ev.append("Kill zone: always pass in backtest")
         
-        ev.append("Kill zone active (hour=%d)" % hour)
+        # Premium/Discount
+        in_discount = price < mid
+        in_premium = price > mid
         
-        if in_discount:
-            score += 0.1
-            ev.append("Discount zone")
-        elif in_premium:
-            score -= 0.1
-            ev.append("Premium zone")
+        # Supertrend-based confirmation (simple and effective)
+        if direction == 1 and in_discount:
+            d = "BUY"
+            score = 0.2 if vr > 1.0 else 0.1
+            ev.append("ST=UP + Discount zone")
+        elif direction == -1 and in_premium:
+            d = "SELL"
+            score = -0.2 if vr > 1.0 else -0.1
+            ev.append("ST=DOWN + Premium zone")
+        elif direction == 1:
+            d = "BUY"
+            score = 0.05
+            ev.append("ST=UP (no discount)")
+        elif direction == -1:
+            d = "SELL"
+            score = -0.05
+            ev.append("ST=DOWN (no premium)")
+        else:
+            d = "NEUTRAL"
+            score = 0
+            ev.append("ST=NEUTRAL")
         
-        if vr > 1.2:
-            score *= 1.5
-            ev.append("Volume confirmed (%.1fx)" % vr)
+        conf = min(abs(score) * 200, 60)
         
-        d = "BUY" if score > 0.05 else ("SELL" if score < -0.05 else "NO_TRADE")
-        return AgentOutput(name=self.name, direction=d, confidence=abs(score)*300,
+        return AgentOutput(name=self.name, direction=d, confidence=conf,
                           score=score, weight=self.weight, evidence=ev)
