@@ -16,7 +16,7 @@ from agents.stage0_independent.momentum_agent import MomentumAgent
 from agents.stage0_independent.volume_agent import VolumeAgent
 from agents.stage0_independent.volatility_agent import VolatilityAgent
 from agents.stage0_independent.pattern_agent import PatternAgent
-from agents.stage0_independent.dl_forecast_agent import DLForecastAgent
+from agents.stage3_decision.ml_real_agent import MLRealAgent
 from agents.stage1_meta.regime_agent import RegimeAgent
 from agents.stage1_meta.structure_agent import StructureAgent
 from agents.stage1_meta.whale_agent import WhaleAgent
@@ -48,7 +48,7 @@ class MasterOrchestrator:
         self.volume = VolumeAgent()
         self.volatility = VolatilityAgent()
         self.pattern = PatternAgent()
-        self.dl_forecast = DLForecastAgent()
+        self.ml_real = MLRealAgent()
         
         # Stage 1
         self.regime = RegimeAgent()
@@ -90,7 +90,7 @@ class MasterOrchestrator:
         print("\n  [STAGE 0] Independent Agents:")
         s0 = []
         for agent in [self.trend, self.momentum, self.volume, 
-                      self.volatility, self.pattern, self.dl_forecast]:
+                      self.volatility, self.pattern]:
             r = agent.analyze(df, symbol, timeframe)
             s0.append(r)
             icon = {"BUY":"BUY","SELL":"SELL","NEUTRAL":"---","CALM":"CALM","CHAOTIC":"CHAOT","CRISIS":"CRISIS"}.get(r.direction, r.direction[:4])
@@ -121,6 +121,11 @@ class MasterOrchestrator:
             s3.append(r)
             print("    %15s: %5s (conf=%3.0f%%)" % (r.name, r.direction[:5], r.confidence))
         ml_r = self.ml.analyze(df, symbol, timeframe, agent_results=all_prev)
+        s3.append(ml_r)
+        
+        # Real ML
+        ml_real_r = self.ml_real.analyze(df, symbol, timeframe)
+        s3.append(ml_real_r)
         s3.append(ml_r)
         print("    %15s: %5s (conf=%3.0f%%)" % (ml_r.name, ml_r.direction[:5], ml_r.confidence))
         
