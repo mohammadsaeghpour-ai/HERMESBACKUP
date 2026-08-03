@@ -85,10 +85,13 @@ class WyckoffAgent(BaseAgent):
             phase = "DISTRIBUTION (Phase C/D)"
             evidence.append(f"📊 Wyckoff Phase: {phase} — institutions distributing")
         elif price_position < 0.3 and recent_range_pct < 5:
+            phase = "ACCUMULATION_BASE"
             evidence.append("📊 Potential ACCUMULATION base forming")
         elif price_position > 0.7 and recent_range_pct < 5:
+            phase = "DISTRIBUTION_BASE"
             evidence.append("📊 Potential DISTRIBUTION base forming")
         else:
+            phase = "UNCLEAR"
             evidence.append("📊 Phase unclear — no clear Wyckoff pattern")
 
         direction = "BUY" if score > 0.15 else "SELL" if score < -0.15 else "NEUTRAL"

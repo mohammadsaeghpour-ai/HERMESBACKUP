@@ -168,9 +168,16 @@ class MasterOrchestrator:
         signal.filters_passed = passed
         signal.filters_total = len(checks)
         
-        # Final
-        print("\n" + "="*60)
-        print("  SIGNAL: %s" % signal.direction)
+        # Final — ONLY signal if ALL 7 filters pass
+        print("\\n" + "="*60)
+        if passed < 7:
+            signal.direction = "WAIT"
+            signal.confidence = 0
+            signal.kelly = 0
+            signal.ev = 0
+            print("  SIGNAL: WAIT (only %d/7 filters passed)" % passed)
+        else:
+            print("  SIGNAL: %s (ALL 7 FILTERS PASS)" % signal.direction)
         print("  Filters: %d/%d" % (passed, len(checks)))
         print("  Entry: $%.2f" % signal.entry)
         if signal.direction != "WAIT":

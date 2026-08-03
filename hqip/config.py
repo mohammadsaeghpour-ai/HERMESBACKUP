@@ -33,11 +33,15 @@ RISK = {
 # ── Data ─────────────────────────────────────────────────
 DATA = {"candle_limit": 300}
 
-# ── Grade Thresholds ─────────────────────────────────────
+# ── Grade Thresholds (granular) ──────────────────────────
 GRADES = {
-    "A+": {"conf": 0.85, "agree": 0.80},
-    "A":  {"conf": 0.75, "agree": 0.75},
-    "B+": {"conf": 0.65, "agree": 0.70},
-    "B":  {"conf": 0.55, "agree": 0.65},
-    "C":  {"conf": 0.45, "agree": 0.55},
+    "A+": {"conf": 0.90, "agree": 0.90},
+    "A":  {"conf": 0.85, "agree": 0.80},
+    "A-": {"conf": 0.80, "agree": 0.75},
+    "B+": {"conf": 0.70, "agree": 0.70},
+    "B":  {"conf": 0.60, "agree": 0.65},
+    "B-": {"conf": 0.50, "agree": 0.60},
+    "C+": {"conf": 0.40, "agree": 0.55},
+    "C":  {"conf": 0.30, "agree": 0.50},
+    "C-": {"conf": 0.20, "agree": 0.45},
 }
