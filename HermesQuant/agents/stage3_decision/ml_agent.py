@@ -6,13 +6,13 @@ class MLAgent:
     name = "ML"
     weight = 1.2
     
-    # Accuracy-based weights from backtest
+    # Accuracy-based weights from backtest (updated)
     ACCURACY_WEIGHTS = {
-        "SMC": 2.0, "Liquidity": 1.8, "GameTheory": 1.5,
-        "Pattern": 1.3, "Momentum": 1.0, "MathBrain": 1.0,
-        "MarketStructure": 0.8, "Trend": 0.5,
-        "DLForecast": 0.4, "Volume": 0.8, "Wyckoff": 0.7,
-        "Regime": 0.6, "Whale": 0.6,
+        "RSI_Divergence": 1.5, "BB_Squeeze": 1.2, "Liquidity": 1.3,
+        "GameTheory": 1.5, "Momentum": 1.2, "Pattern": 1.0,
+        "MarketStructure": 1.0, "Trend": 0.7, "MathBrain": 0.8,
+        "DLForecast": 0.8, "Volume": 0.9, "Wyckoff": 1.0,
+        "Regime": 0.5, "Whale": 0.5, "SmartAction": 1.0,
     }
     
     def analyze(self, df, symbol="", timeframe="", agent_results=None):

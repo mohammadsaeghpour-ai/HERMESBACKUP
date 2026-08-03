@@ -20,7 +20,8 @@ from agents.stage0_independent.dl_forecast_agent import DLForecastAgent
 from agents.stage1_meta.regime_agent import RegimeAgent
 from agents.stage1_meta.structure_agent import StructureAgent
 from agents.stage1_meta.whale_agent import WhaleAgent
-from agents.stage2_structure.smc_agent import SMCAgent
+from agents.stage2_structure.rsi_divergence_agent import RSIDivergenceAgent
+from agents.stage2_structure.bb_squeeze_agent import BBSqueezeAgent
 from agents.stage2_structure.liquidity_agent import LiquidityAgent
 from agents.stage2_structure.wyckoff_agent import WyckoffAgent
 from agents.stage2_structure.math_brain_agent import MathBrainAgent
@@ -52,7 +53,8 @@ class MasterOrchestrator:
         self.whale = WhaleAgent()
         
         # Stage 2
-        self.smc = SMCAgent()
+        self.rsi_div = RSIDivergenceAgent()
+        self.bb_squeeze = BBSqueezeAgent()
         self.liquidity = LiquidityAgent()
         self.wyckoff = WyckoffAgent()
         self.math_brain = MathBrainAgent()
@@ -99,7 +101,7 @@ class MasterOrchestrator:
         # Stage 2: Structure agents
         print("\n  [STAGE 2] Structure Agents:")
         s2 = []
-        for agent in [self.smc, self.liquidity, self.wyckoff, self.math_brain]:
+        for agent in [self.rsi_div, self.bb_squeeze, self.liquidity, self.wyckoff, self.math_brain]:
             r = agent.analyze(df, symbol, timeframe)
             s2.append(r)
             print("    %15s: %5s (conf=%3.0f%%)" % (r.name, r.direction[:5], r.confidence))
@@ -128,7 +130,7 @@ class MasterOrchestrator:
         buy_w = sum(r.weight for r in all_agents if r.direction == "BUY")
         sell_w = sum(r.weight for r in all_agents if r.direction == "SELL")
         total = buy_w + sell_w if buy_w + sell_w > 0 else 1
-        vote_ok = buy_w/total >= 0.70 or sell_w/total >= 0.70
+        vote_ok = buy_w/total >= 0.75 or sell_w/total >= 0.75
         
         h4_df = fetch_candles(symbol, "4H", 100)
         _, h4_st = ind.supertrend(h4_df)

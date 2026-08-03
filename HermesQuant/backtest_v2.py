@@ -24,7 +24,8 @@ from agents.stage0_independent.dl_forecast_agent import DLForecastAgent
 from agents.stage1_meta.regime_agent import RegimeAgent
 from agents.stage1_meta.structure_agent import StructureAgent
 from agents.stage1_meta.whale_agent import WhaleAgent
-from agents.stage2_structure.smc_agent import SMCAgent
+from agents.stage2_structure.rsi_divergence_agent import RSIDivergenceAgent
+from agents.stage2_structure.bb_squeeze_agent import BBSqueezeAgent
 from agents.stage2_structure.liquidity_agent import LiquidityAgent
 from agents.stage2_structure.wyckoff_agent import WyckoffAgent
 from agents.stage2_structure.math_brain_agent import MathBrainAgent
@@ -64,7 +65,7 @@ def backtest_v2(instId="ETH-USDT-SWAP", bar="15m"):
         TrendAgent(), MomentumAgent(), VolumeAgent(),
         VolatilityAgent(), PatternAgent(), DLForecastAgent(),
         RegimeAgent(), StructureAgent(), WhaleAgent(),
-        SMCAgent(), LiquidityAgent(), WyckoffAgent(), MathBrainAgent(),
+        RSIDivergenceAgent(), BBSqueezeAgent(), LiquidityAgent(), WyckoffAgent(), MathBrainAgent(),
         GameTheoryAgent(), SmartActionAgent(), MLAgent(),
     ]
     
@@ -102,7 +103,7 @@ def backtest_v2(instId="ETH-USDT-SWAP", bar="15m"):
         buy_w = sum(r.weight for r in results if r.direction == "BUY")
         sell_w = sum(r.weight for r in results if r.direction == "SELL")
         total_w = buy_w + sell_w if buy_w + sell_w > 0 else 1
-        vote_ok = buy_w/total_w >= 0.70 or sell_w/total_w >= 0.70
+        vote_ok = buy_w/total_w >= 0.75 or sell_w/total_w >= 0.75
         
         if not vote_ok:
             skipped += 1
