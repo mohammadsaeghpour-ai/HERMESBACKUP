@@ -49,7 +49,7 @@ def fetch_all(instId, bar, limit=300):
     return pd.DataFrame(rows)
 
 
-def backtest_v2(instId="ETH-USDT-SWAP", bar="15m"):
+def backtest_v2(instId="ETH-USDT-SWAP", bar="15m", vote_thresh=0.75):
     tz = timezone(timedelta(hours=3, minutes=30))
     print("="*70)
     print("  BACKTEST v2 (Full 7-Gate Filter): %s | %s" % (instId, bar))
@@ -103,7 +103,7 @@ def backtest_v2(instId="ETH-USDT-SWAP", bar="15m"):
         buy_w = sum(r.weight for r in results if r.direction == "BUY")
         sell_w = sum(r.weight for r in results if r.direction == "SELL")
         total_w = buy_w + sell_w if buy_w + sell_w > 0 else 1
-        vote_ok = buy_w/total_w >= 0.75 or sell_w/total_w >= 0.75
+        vote_ok = buy_w/total_w >= vote_thresh or sell_w/total_w >= vote_thresh
         
         if not vote_ok:
             skipped += 1
@@ -269,9 +269,9 @@ if __name__ == "__main__":
     print("#  BACKTEST v2: Full 7-Gate Filter")
     print("#"*70)
     
-    r_eth = backtest_v2("ETH-USDT-SWAP", "15m")
+    r_eth = backtest_v2("ETH-USDT-SWAP", "15m", vote_thresh=0.72)
     print("\n")
-    r_btc = backtest_v2("BTC-USDT-SWAP", "15m")
+    r_btc = backtest_v2("BTC-USDT-SWAP", "15m", vote_thresh=0.77)
     
     print("\n" + "#"*70)
     print("#  COMPARISON")

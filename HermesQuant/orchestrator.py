@@ -130,7 +130,10 @@ class MasterOrchestrator:
         buy_w = sum(r.weight for r in all_agents if r.direction == "BUY")
         sell_w = sum(r.weight for r in all_agents if r.direction == "SELL")
         total = buy_w + sell_w if buy_w + sell_w > 0 else 1
-        vote_ok = buy_w/total >= 0.75 or sell_w/total >= 0.75
+        # BTC needs stricter threshold (77%), ETH can be looser (72%)
+        is_btc = "BTC" in symbol.upper()
+        vote_thresh = 0.77 if is_btc else 0.72
+        vote_ok = buy_w/total >= vote_thresh or sell_w/total >= vote_thresh
         
         h4_df = fetch_candles(symbol, "4H", 100)
         _, h4_st = ind.supertrend(h4_df)

@@ -6,13 +6,14 @@ class MLAgent:
     name = "ML"
     weight = 1.2
     
-    # Accuracy-based weights from backtest (updated)
+    # Accuracy-based weights (final calibrated)
+    # High accuracy agents get higher weight
     ACCURACY_WEIGHTS = {
-        "RSI_Divergence": 1.5, "BB_Squeeze": 1.2, "Liquidity": 1.3,
-        "GameTheory": 1.5, "Momentum": 1.2, "Pattern": 1.0,
-        "MarketStructure": 1.0, "Trend": 0.7, "MathBrain": 0.8,
-        "DLForecast": 0.8, "Volume": 0.9, "Wyckoff": 1.0,
-        "Regime": 0.5, "Whale": 0.5, "SmartAction": 1.0,
+        "RSI_Divergence": 1.5, "BB_Squeeze": 1.3, "Liquidity": 1.0,
+        "GameTheory": 1.4, "Momentum": 1.3, "Pattern": 0.8,
+        "MarketStructure": 0.9, "Trend": 0.6, "MathBrain": 0.7,
+        "DLForecast": 0.9, "Volume": 1.2, "Wyckoff": 1.5,
+        "Regime": 0.5, "Whale": 0.5, "SmartAction": 1.1,
     }
     
     def analyze(self, df, symbol="", timeframe="", agent_results=None):
