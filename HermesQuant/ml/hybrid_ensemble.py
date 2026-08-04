@@ -1,120 +1,218 @@
 """
-Hybrid Ensemble — Combines TCN + Attention + ML Engine
-Meta-learner that optimally combines all models
+Hybrid Ensemble — Master Orchestrator for Deep Learning Models
+================================================================
+Combines all 5 hybrid DL models into a meta-ensemble:
+1. HybridTCN          — Temporal Convolutional Network
+2. HybridTransformer  — Transformer with multi-head attention
+3. HybridCNNLSTM      — CNN + LSTM hybrid
+4. HybridGAN          — GAN-augmented training
+5. HybridAttentionLSTM — Attention-weighted LSTM
+
+Architecture:
+- Each model produces a probability, direction, and confidence
+- Meta-ensemble combines via weighted averaging
+- Weights are learned based on recent accuracy
+- Disagreement between models signals uncertainty
+
+This module replaces the old MLEngineV2 as the ML backbone.
 """
-import sys; sys.path.insert(0, "/data/workspace/HermesQuant")
+import sys
+sys.path.insert(0, "/data/workspace/HermesQuant")
+
 import numpy as np
+import pandas as pd
+from sklearn.metrics import accuracy_score
 
-try:
-    from sklearn.linear_model import LogisticRegression
-    HAS_SKLEARN = True
-except ImportError:
-    HAS_SKLEARN = False
-
-from ml.hybrid_tcn import TCNHybrid
-from ml.hybrid_attention import AttentionHybrid
-from ml.ml_engine_v2 import MLEngineV2
+from ml.hybrid_tcn import HybridTCN
+from ml.hybrid_transformer import HybridTransformer
+from ml.hybrid_cnn_lstm import HybridCNNLSTM
+from ml.hybrid_gan import HybridGAN
+from ml.hybrid_attention_lstm import HybridAttentionLSTM
 
 
 class HybridEnsemble:
     """
-    Combines multiple models:
-    1. TCN Hybrid (multi-scale patterns)
-    2. Attention Hybrid (feature importance)
-    3. ML Engine v2 (RF+GB ensemble)
+    Meta-ensemble combining 5 hybrid DL models.
     
-    Uses logistic regression as meta-learner
+    Architecture:
+    ─────────────
+    Layer 1 (Specialist Models):
+        TCN, Transformer, CNN-LSTM, GAN, Attention-LSTM
+        Each produces: (probability, direction, confidence)
+    
+    Layer 2 (Meta-Learner):
+        - Dynamic weighting based on recent performance
+        - Agreement scoring
+        - Uncertainty estimation
+    
+    Layer 3 (Decision):
+        - Weighted probability → direction
+        - Confidence = model agreement × individual confidence
+        - Disagreement threshold → NEUTRAL (high uncertainty)
     """
-    name = "Hybrid_Ensemble"
+    
+    # Base weights (adjusted dynamically based on performance)
+    BASE_WEIGHTS = {
+        "tcn": 1.0,
+        "transformer": 1.2,   # transformers tend to be strong
+        "cnn_lstm": 1.1,
+        "gan": 0.9,           # augmentation is helpful but secondary
+        "attention_lstm": 1.1,
+    }
+    
+    # Minimum accuracy threshold for a model to contribute
+    MIN_ACCURACY = 0.48
     
     def __init__(self):
-        self.tcn = TCNHybrid()
-        self.attention = AttentionHybrid()
-        self.ml_engine = MLEngineV2()
-        self.meta_learner = LogisticRegression() if HAS_SKLEARN else None
+        self.models = {
+            "tcn": HybridTCN(),
+            "transformer": HybridTransformer(),
+            "cnn_lstm": HybridCNNLSTM(),
+            "gan": HybridGAN(),
+            "attention_lstm": HybridAttentionLSTM(),
+        }
+        self.weights = dict(self.BASE_WEIGHTS)
         self.is_trained = False
+        self.model_accuracies = {}
+        self.last_predictions = {}  # track recent predictions for adaptive weighting
     
-    def train(self, df, horizon=5, threshold=0.001):
-        """Train all sub-models and meta-learner"""
-        # Train sub-models
-        tcn_ok = self.tcn.train(df, horizon, threshold)
-        attn_ok = self.attention.train(df, horizon, threshold)
-        ml_ok = self.ml_engine.train(df, horizon, threshold)
+    def train(self, df, horizon=5, threshold=0.001, train_ratio=0.7):
+        """
+        Train all hybrid models on the same data.
+        Each model may use different subsets of features internally.
+        """
+        results = {}
         
-        self.is_trained = any([tcn_ok, attn_ok, ml_ok])
+        for name, model in self.models.items():
+            try:
+                success = model.train(df, horizon, threshold, train_ratio)
+                if success:
+                    results[name] = model.train_accuracy
+                    self.model_accuracies[name] = model.train_accuracy
+                else:
+                    results[name] = 0
+                    self.model_accuracies[name] = 0
+            except Exception as e:
+                print(f"[HybridEnsemble] Error training {name}: {e}")
+                results[name] = 0
+                self.model_accuracies[name] = 0
         
-        return self.is_trained
+        # Adaptive weight adjustment based on training accuracy
+        self._update_weights()
+        
+        trained_count = sum(1 for v in results.values() if v > 0)
+        self.is_trained = trained_count >= 2  # need at least 2 models
+        
+        return results
+    
+    def _update_weights(self):
+        """
+        Update model weights based on training accuracy.
+        Better-performing models get higher weight.
+        """
+        for name, acc in self.model_accuracies.items():
+            if acc > 0:
+                # Scale weight by accuracy relative to baseline (0.5)
+                # Models above 55% get boosted, below get reduced
+                acc_factor = max(0.1, (acc - 0.45) / 0.55)
+                self.weights[name] = self.BASE_WEIGHTS.get(name, 1.0) * acc_factor
     
     def predict(self, df):
-        """Ensemble prediction with uncertainty"""
-        predictions = []
+        """
+        Get consensus prediction from all models.
         
-        # TCN prediction
-        if self.tcn.is_trained:
-            prob, direction = self.tcn.predict(df)
-            predictions.append(("tcn", prob, direction))
+        Returns:
+            (probability, direction, confidence, details)
+        """
+        if not self.is_trained:
+            return 0.5, "NEUTRAL", 0.5, {}
         
-        # Attention prediction
-        if self.attention.is_trained:
-            prob, direction = self.attention.predict(df)
-            predictions.append(("attention", prob, direction))
+        predictions = {}
+        weighted_probs = []
+        total_weight = 0
         
-        # ML Engine prediction
-        if self.ml_engine.is_trained:
-            prob, direction, uncertainty = self.ml_engine.predict(df)
-            predictions.append(("ml", prob, direction))
+        for name, model in self.models.items():
+            if model.is_trained:
+                try:
+                    prob, direction, confidence = model.predict(df)
+                    predictions[name] = {
+                        "prob": prob,
+                        "direction": direction,
+                        "confidence": confidence,
+                        "weight": self.weights.get(name, 1.0),
+                    }
+                    weighted_probs.append(prob * self.weights.get(name, 1.0))
+                    total_weight += self.weights.get(name, 1.0)
+                except Exception as e:
+                    print(f"[HybridEnsemble] Error predicting {name}: {e}")
         
-        if not predictions:
-            return 0.5, "NEUTRAL", 0.5
+        if not weighted_probs or total_weight == 0:
+            return 0.5, "NEUTRAL", 0.5, predictions
         
-        # Weighted average (based on model accuracy)
-        weights = []
-        probs = []
+        # ── Meta-Ensemble Decision ──
         
-        for name, prob, direction in predictions:
-            if name == "tcn":
-                w = self.tcn.train_accuracy if hasattr(self.tcn, 'train_accuracy') else 0.5
-            elif name == "attention":
-                w = self.attention.train_accuracy if hasattr(self.attention, 'train_accuracy') else 0.5
-            else:
-                w = self.ml_engine.train_accuracy if hasattr(self.ml_engine, 'train_accuracy') else 0.5
-            
-            weights.append(w)
-            probs.append(prob)
+        # Weighted average probability
+        avg_prob = np.mean(weighted_probs) / (total_weight / len(weighted_probs))
         
-        # Normalize weights
-        total_w = sum(weights)
-        if total_w > 0:
-            weights = [w/total_w for w in weights]
+        # Model agreement (how much do models agree?)
+        all_probs = [p["prob"] for p in predictions.values()]
+        agreement = 1.0 - np.std(all_probs) * 4  # high std = low agreement
+        agreement = max(0, min(1, agreement))
         
-        # Weighted average
-        avg_prob = sum(p * w for p, w in zip(probs, weights))
+        # Direction consensus
+        buy_votes = sum(1 for p in predictions.values() if p["direction"] == "BUY")
+        sell_votes = sum(1 for p in predictions.values() if p["direction"] == "SELL")
+        total_votes = buy_votes + sell_votes
         
-        # Uncertainty = disagreement between models
-        model_probs = [p for _, p, _ in predictions]
-        uncertainty = np.std(model_probs) if len(model_probs) > 1 else 0.5
-        
-        # Direction
-        if avg_prob > 0.55:
+        # Decision thresholds
+        if avg_prob > 0.58 and agreement > 0.3:
             direction = "BUY"
-        elif avg_prob < 0.45:
+        elif avg_prob < 0.42 and agreement > 0.3:
             direction = "SELL"
+        elif buy_votes >= 3:
+            direction = "BUY"
+            avg_prob = max(avg_prob, 0.55)
+        elif sell_votes >= 3:
+            direction = "SELL"
+            avg_prob = min(avg_prob, 0.45)
         else:
             direction = "NEUTRAL"
         
-        return avg_prob, direction, uncertainty
+        # Confidence = accuracy × agreement × distance from 0.5
+        base_confidence = max(avg_prob, 1 - avg_prob)
+        confidence = min(base_confidence * agreement * 100, 90)
+        
+        # Store for adaptive weighting
+        self.last_predictions = predictions
+        
+        return avg_prob, direction, confidence, predictions
     
     def get_model_report(self):
-        """Report on each sub-model"""
-        report = []
+        """Get diagnostic report of all models."""
+        report = {}
+        for name, acc in self.model_accuracies.items():
+            report[name] = {
+                "accuracy": acc,
+                "weight": self.weights.get(name, 1.0),
+                "is_trained": self.models[name].is_trained,
+            }
+        return report
+    
+    def retrain_weak(self, df, horizon=5, threshold=0.001, min_acc=0.48):
+        """Retrain only underperforming models."""
+        retrained = []
+        for name, model in self.models.items():
+            acc = self.model_accuracies.get(name, 0)
+            if acc < min_acc and acc > 0:
+                try:
+                    success = model.train(df, horizon, threshold)
+                    if success:
+                        self.model_accuracies[name] = model.train_accuracy
+                        retrained.append((name, model.train_accuracy))
+                except Exception:
+                    pass
         
-        if self.tcn.is_trained:
-            report.append("TCN: acc=%.1f%%" % (self.tcn.train_accuracy * 100))
+        if retrained:
+            self._update_weights()
         
-        if self.attention.is_trained:
-            report.append("Attention: acc=%.1f%%" % (self.attention.train_accuracy * 100))
-        
-        if self.ml_engine.is_trained:
-            report.append("ML_Engine: acc=%.1f%%" % (self.ml_engine.train_accuracy * 100))
-        
-        return " | ".join(report) if report else "No models trained"
+        return retrained
