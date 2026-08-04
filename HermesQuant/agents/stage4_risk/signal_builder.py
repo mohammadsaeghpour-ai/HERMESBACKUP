@@ -61,7 +61,7 @@ def build_signal(agent_outputs, df, capital=10, leverage=20, max_loss=3.0):
         pw = p_up if direction == "BUY" else p_down
         kelly = quarter_kelly(pw, 2.0)
         ev = expected_value(pw, 1-pw, 2.0, 1.0)
-        risk = max_loss * min(kelly * 4, 1.0)
+        risk = max_loss * min(kelly, 1.0)  # Quarter-Kelly applied correctly
         pos = risk / (abs(sl - price) / price) if sl != price else 0
     else:
         kelly = ev = risk = pos = 0

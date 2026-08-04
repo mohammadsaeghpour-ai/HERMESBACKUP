@@ -80,7 +80,7 @@ def volume_ratio(df, period=20):
 def find_swings(df, lookback=5):
     highs, lows = [], []
     h, l = df["high"].values, df["low"].values
-    for i in range(lookback, len(df) - lookback):
+    for i in range(lookback, len(df)):  # No future lookback
         if h[i] == max(h[i-lookback:i+lookback+1]):
             highs.append((i, h[i]))
         if l[i] == min(l[i-lookback:i+lookback+1]):
