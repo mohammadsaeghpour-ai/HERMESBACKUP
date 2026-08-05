@@ -2,10 +2,9 @@
 Feature Engineering — 80+ features
 Technical + Microstructure + Advanced
 """
-import sys; sys.path.insert(0, "/data/workspace/HermesQuant_v3")
 import numpy as np
 import pandas as pd
-from core import indicators as ind
+from HermesQuant_v3.core import indicators as ind
 
 
 class FeatureEngine:
