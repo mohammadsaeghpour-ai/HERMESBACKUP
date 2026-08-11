@@ -1,6 +1,6 @@
 """
-Advanced Acceleration Agent — Hidden Momentum Detection
-========================================================
+Advanced Acceleration Agent — Hidden Momentum Detection (OPTIMIZED)
+===================================================================
 Detects acceleration (change in velocity) across multiple timeframes:
 1. **Price Velocity** — rate of price change
 2. **Price Acceleration** — rate of change of velocity
@@ -11,6 +11,7 @@ Detects acceleration (change in velocity) across multiple timeframes:
 7. **Acceleration Divergence** — price vs acceleration divergence
 
 Weight: 1.2
+Optimized: threshold=0.10-0.20, hold=8-15
 """
 from hqip.agents.base import BaseAgent, AgentOutput
 import numpy as np
@@ -191,37 +192,37 @@ class AccelerationAgent(BaseAgent):
         # 7. Acceleration Divergence
         div = self._acceleration_divergence(close)
         
-        # === Scoring ===
+        # === Scoring (OPTIMIZED) ===
         score = 0.0
         reasons = []
         
-        # Price Acceleration (40% weight)
+        # Price Acceleration (35% weight)
         if accel > 0:
             if vel_dir > 0:
-                score += 0.40
+                score += 0.35
                 reasons.append(f'Price accel UP ({accel:.4f})')
             else:
-                score -= 0.40
+                score -= 0.35
                 reasons.append(f'Price accel DOWN ({accel:.4f})')
         
-        # Volume Momentum (20% weight)
+        # Volume Momentum (25% weight)
         vol_mom = np.mean(volume[-5:]) / max(np.mean(volume[-20:]), 1)
         if vol_mom > 1.5:
-            score += 0.20
+            score += 0.25
             reasons.append(f'Volume accelerating ({vol_mom:.2f}x)')
         elif vol_mom < 0.5:
-            score -= 0.20
+            score -= 0.25
             reasons.append(f'Volume decelerating ({vol_mom:.2f}x)')
         
-        # Hidden Momentum (20% weight)
+        # Hidden Momentum (25% weight)
         if hidden > 0:
-            score += 0.20
+            score += 0.25
             reasons.append(f'Hidden momentum positive ({hidden:.4f})')
         elif hidden < 0:
-            score -= 0.20
+            score -= 0.25
             reasons.append(f'Hidden momentum negative ({hidden:.4f})')
         
-        # Time Compression (10% weight)
+        # Time Compression (5% weight)
         if compression > 0.5:
             reasons.append(f'Time compression ({compression:.2f}) — breakout imminent')
         
@@ -233,10 +234,10 @@ class AccelerationAgent(BaseAgent):
             score -= 0.10
             reasons.append('Bearish acceleration divergence')
         
-        # Direction
-        if score > 0.15:
+        # Direction (OPTIMIZED: threshold 0.10-0.20)
+        if score > 0.10:
             direction = "BUY"
-        elif score < -0.15:
+        elif score < -0.10:
             direction = "SELL"
         else:
             direction = "NEUTRAL"
